@@ -1,0 +1,16 @@
+{
+  "name": "backend-b",
+  "version": "1.0.0",
+  "description": "Backend B service for CN course project",
+  "main": "serverB.js",
+  "scripts": {
+    "start": "node serverB.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
