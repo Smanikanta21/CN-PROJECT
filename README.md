@@ -14,15 +14,15 @@
 
 ```mermaid
 graph LR
-    C1["💻 Client 1\nAbhinay · Mac 1\n10.7.17.157"]
-    C2["💻 Client 2\nSrikar · Mac 3\n10.7.17.37"]
+    C1[" Client 1\nAbhinay · Mac 1\n10.7.17.157"]
+    C2[" Client 2\nSrikar · Mac 3\n10.7.17.37"]
 
-    DNS["🔍 dnsmasq\nDNS Server · Mac 1\n10.7.17.157:53/UDP"]
+    DNS[" dnsmasq\nDNS Server · Mac 1\n10.7.17.157:53/UDP"]
 
-    EDGE["⚖️ nginx\nJunaid · Mac 2\n10.7.17.8:80/:443\nRound Robin LB · TLS"]
+    EDGE[" nginx\nJunaid · Mac 2\n10.7.17.8:80/:443\nRound Robin LB · TLS"]
 
-    BA["🖥️ Backend A\nAbhinay · Mac 1\n10.7.17.157:3001\nExpress · X-Backend: A"]
-    BB["🖥️ Backend B\nSrikar · Mac 3\n10.7.17.37:3002\nExpress · X-Backend: B"]
+    BA[" Backend A\nAbhinay · Mac 1\n10.7.17.157:3001\nExpress · X-Backend: A"]
+    BB[" Backend B\nSrikar · Mac 3\n10.7.17.37:3002\nExpress · X-Backend: B"]
 
     C1 -->|"DNS query (UDP 53)"| DNS
     C2 -->|"DNS query (UDP 53)"| DNS

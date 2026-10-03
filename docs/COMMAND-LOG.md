@@ -38,8 +38,8 @@ flowchart LR
     CONF["copy dns/dnsmasq.conf\nto /opt/homebrew/etc/"]
     START["sudo brew services restart dnsmasq"]
     SETDNS["Set resolver on Mac 1 + Mac 3\nnetworksetup -setdnsservers Wi-Fi 10.7.17.157"]
-    DIG1["dig @10.7.17.157 app.routex.test\n→ expect 10.7.17.8 ✅"]
-    DIG2["dig @10.7.17.157 api.routex.test\n→ expect 10.7.17.8 ✅"]
+    DIG1["dig @10.7.17.157 app.routex.test\n→ expect 10.7.17.8 "]
+    DIG2["dig @10.7.17.157 api.routex.test\n→ expect 10.7.17.8 "]
 
     INSTALL --> CONF --> START --> SETDNS --> DIG1 & DIG2
 ```
@@ -249,11 +249,11 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    F1["❌ Failure 1\nWrong DNS resolver\nnetworksetup → 10.7.123.12\ndig → timeout · curl (6) no host"]
-    F2["❌ Failure 2\nWrong DNS A record\naddress=.../10.7.17.121\ndig returns bad IP · curl (7) refused"]
-    F3["⚠️ Failure 3\nBackend A stopped\nnginx marks failed\nAll replies: X-Backend: B"]
-    F4["❌ Failure 4\nBoth backends stopped\nTLS ok · HTTP layer gone\nnginx returns 502 Bad Gateway"]
-    F5["❌ Failure 5\nWrong port 3999\nHost up · port closed\ncurl (7) Connection refused · RST"]
+    F1[" Failure 1\nWrong DNS resolver\nnetworksetup → 10.7.123.12\ndig → timeout · curl (6) no host"]
+    F2[" Failure 2\nWrong DNS A record\naddress=.../10.7.17.121\ndig returns bad IP · curl (7) refused"]
+    F3[" Failure 3\nBackend A stopped\nnginx marks failed\nAll replies: X-Backend: B"]
+    F4[" Failure 4\nBoth backends stopped\nTLS ok · HTTP layer gone\nnginx returns 502 Bad Gateway"]
+    F5[" Failure 5\nWrong port 3999\nHost up · port closed\ncurl (7) Connection refused · RST"]
 
     F1 & F2 & F3 & F4 & F5 --> RES(["Restore & repeat demo"])
 ```

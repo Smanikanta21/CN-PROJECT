@@ -17,18 +17,18 @@ Network: `10.7.0.0/19` · Gateway: `10.7.0.1`
 ```mermaid
 graph TD
     subgraph Mac1["Mac 1 — Abhinay · 10.7.17.157"]
-        DNS["🔍 dnsmasq\n:53 UDP+TCP"]
-        BA["🖥️ Backend A\n:3001 HTTP\nX-Backend: A"]
-        C1["💻 Client 1"]
+        DNS[" dnsmasq\n:53 UDP+TCP"]
+        BA[" Backend A\n:3001 HTTP\nX-Backend: A"]
+        C1[" Client 1"]
     end
 
     subgraph Mac2["Mac 2 — Junaid · 10.7.17.8"]
-        EDGE["⚖️ nginx 1.31.6\n:80 HTTP · :443 HTTPS (TLS 1.3)\nRound-Robin Load Balancer"]
+        EDGE[" nginx 1.31.6\n:80 HTTP · :443 HTTPS (TLS 1.3)\nRound-Robin Load Balancer"]
     end
 
     subgraph Mac3["Mac 3 — Srikar · 10.7.17.37"]
-        BB["🖥️ Backend B\n:3002 HTTP\nX-Backend: B"]
-        C2["💻 Client 2"]
+        BB[" Backend B\n:3002 HTTP\nX-Backend: B"]
+        C2[" Client 2"]
     end
 
     C1 -->|"① DNS query\nA? app.routex.test"| DNS

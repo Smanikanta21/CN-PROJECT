@@ -4,27 +4,27 @@
 
 ```mermaid
 graph LR
-    GW["🌐 Gateway\n10.7.0.1\nDHCP / LAN Router"]
+    GW[" Gateway\n10.7.0.1\nDHCP / LAN Router"]
 
     subgraph Mac1["Mac 1 — Abhinay (Manikanta)"]
         direction TB
-        M1IP["🔖 10.7.17.157"]
-        M1DNS["🔍 dnsmasq · :53 UDP+TCP"]
-        M1BE["🖥️ Backend A · :3001 TCP"]
-        M1C["💻 Client 1"]
+        M1IP[" 10.7.17.157"]
+        M1DNS[" dnsmasq · :53 UDP+TCP"]
+        M1BE[" Backend A · :3001 TCP"]
+        M1C[" Client 1"]
     end
 
     subgraph Mac2["Mac 2 — Junaid"]
         direction TB
-        M2IP["🔖 10.7.17.8"]
-        M2EDGE["⚖️ nginx Edge\n:80 HTTP · :443 HTTPS\nTLSv1.3 · Round Robin LB"]
+        M2IP[" 10.7.17.8"]
+        M2EDGE[" nginx Edge\n:80 HTTP · :443 HTTPS\nTLSv1.3 · Round Robin LB"]
     end
 
     subgraph Mac3["Mac 3 — Srikar"]
         direction TB
-        M3IP["🔖 10.7.17.37"]
-        M3BE["🖥️ Backend B · :3002 TCP"]
-        M3C["💻 Client 2 · Wireshark"]
+        M3IP[" 10.7.17.37"]
+        M3BE[" Backend B · :3002 TCP"]
+        M3C[" Client 2 · Wireshark"]
     end
 
     GW --- Mac1
@@ -94,7 +94,7 @@ graph LR
 
 ```mermaid
 flowchart TD
-    START(["⚠️ IP Changed!"])
+    START([" IP Changed!"])
     F1["Edit dns/dnsmasq.conf\nlisten-address + address= records"]
     F2["Edit nginx/nginx.conf\nupstream block IPs"]
     F3["Edit visualizer/script.js\nNET constant at top"]
@@ -102,7 +102,7 @@ flowchart TD
     R2["nginx -t && sudo nginx -s reload\n(Mac 2)"]
     R3["Flush DNS caches on clients\ndscacheutil -flushcache"]
     TEST["dig app.routex.test\ncurl -I https://app.routex.test/"]
-    DONE(["✅ System restored"])
+    DONE([" System restored"])
 
     START --> F1 & F2 & F3
     F1 --> R1
