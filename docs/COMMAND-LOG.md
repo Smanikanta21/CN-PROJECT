@@ -4,12 +4,12 @@
 
 ## DNS Testing
 ```bash
-dig app.teamX.test
-nslookup app.teamX.test
+dig app.routex.test
+nslookup app.routex.test
 ```
 
 ## HTTP/HTTPS Testing
 ```bash
-curl -I http://app.teamX.test
-curl -v https://app.teamX.test
+curl -I http://app.routex.test
+curl -v https://app.routex.test
 ```
