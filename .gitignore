@@ -6,3 +6,4 @@ yarn-error.log*
 .env
 visualizer/*
 tls/app.routex.test.key
+*.key
