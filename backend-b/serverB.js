@@ -2,6 +2,10 @@ const express = require('express');
 const app = express();
 const port = 3002;
 
+app.use((req, res, next) => {
+    console.log(new Date().toISOString(), 'from', req.socket.remoteAddress, req.method, req.url);
+    next();
+});
 // Middleware to add the X-Backend header to all responses
 app.use((req, res, next) => {
     res.setHeader('X-Backend', 'B');
@@ -18,7 +22,16 @@ app.get('/api/status', (req, res) => {
     res.setHeader('Cache-Control', 'max-age=60');
     res.json({ backend: 'B', status: 'ok' });
 });
+// Same body on A and B -> same ETag -> a 304 works whichever backend answers
+app.get('/api/info', (req, res) => {
+    res.setHeader('Cache-Control', 'max-age=60');
+    res.json({ service: 'RouteX private API', version: 2 });
+});
 
+// Quick liveness check used while troubleshooting
+app.get('/health', (req, res) => {
+    res.json({ healthy: true });
+});
 // Handle 404 for other routes
 app.use((req, res) => {
     res.status(404).json({ error: 'Not Found' });
