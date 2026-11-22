@@ -7,3 +7,5 @@ yarn-error.log*
 visualizer/*
 tls/app.routex.test.key
 *.key
+
+*.key
