@@ -54,6 +54,8 @@ Client → DNS (Mac 1:53, fallback Mac 3:53) → edge (Mac 2:443) → nginx LB �
 
 ## Phase 1 Progress
 
+Full write-up: [`docs/PROJECT-REPORT.md` → Part 1](docs/PROJECT-REPORT.md#part-1--phase-1-build--observe)
+
 - [x] **A**: Private LAN: IPs pinned, ping matrix, topology diagram
 - [x] **B**: Private DNS (dnsmasq on Mac 1), clients pointed at it
 - [x] **C**: Two backend services (A on Mac 1:3001, B on Mac 3:3002)
@@ -65,7 +67,7 @@ Client → DNS (Mac 1:53, fallback Mac 3:53) → edge (Mac 2:443) → nginx LB �
 
 ## Phase 2 Progress
 
-Full write-up: [`docs/PHASE2-REPORT.md`](docs/PHASE2-REPORT.md)
+Full write-up for both phases: [`docs/PROJECT-REPORT.md`](docs/PROJECT-REPORT.md)
 
 - [x] **Rebuild**: 4-Mac layout, Backend A moved to Mac 4, new cert with `app` + `api` in the SAN
 - [x] **Ext A**: Backup DNS on Mac 3; Mac 1 stopped → `SERVER: 10.7.28.31#53` still answers
@@ -92,7 +94,7 @@ docs/
   IP-INVENTORY.md   all Macs, ports, reachability after pf
   TOPOLOGY.md       diagrams for Phase 1 and Phase 2
   COMMAND-LOG.md    every command, Phase 1 and Phase 2
-  PHASE2-REPORT.md  Phase 2 final report
+  PROJECT-REPORT.md full report: Phase 1 (build) + Phase 2 (harden)
 evidence/
   01-lan/ … 08-failures/       Phase 1 screenshots and captures
   09-phase2/

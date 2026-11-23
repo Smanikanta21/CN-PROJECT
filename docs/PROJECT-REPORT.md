@@ -1,8 +1,102 @@
-# RouteX — Phase 2 Report (Harden, Recover & Troubleshoot)
+# RouteX — Project Report (Phase 1 + Phase 2)
 
-**Team:** Abhinay (Mac 1) · Junaid (Mac 2) · Srikar (Mac 3) · Nachiket (Mac 4)
-**Network:** hostel Wi-Fi `10.7.0.0/19`, gateway `10.7.0.1` · **Zone:** `routex.test`
-**Test date:** 22 Nov 2026
+**Computer Networks course project: Private Network Service Platform**
+**Team:** Abhinay (Manikanta) · Junaid · Srikar · Nachiket
+**Network:** hostel Wi-Fi `10.7.0.0/19`, gateway `10.7.0.1` · **Private zone:** `routex.test`
+
+| Part | Phase | Tested | Machines |
+|------|-------|-------------|----------|
+| [Part 1](#part-1--phase-1-build--observe) | Phase 1: Build & Observe | 3 Oct 2026 | 3 Macs (Mac 4 damaged) |
+| [Part 2](#part-2--phase-2-harden-recover--troubleshoot) | Phase 2: Harden, Recover & Troubleshoot | 22 Nov 2026 | 4 Macs |
+
+**Core idea:** the app stays simple and the network is the project. A client types `app.routex.test`, resolves it through our own DNS, connects over HTTPS to our nginx edge, and gets an answer from one of two backends. Every step is proven with `dig`, `curl` and Wireshark.
+
+---
+
+# Part 1 — Phase 1: Build & Observe
+
+## 1.1 Architecture and roles
+
+Mac 4 was damaged during Phase 1, so we combined roles on 3 Macs. The PDF allows this for smaller teams. Mac 1 ran both the DNS server and Backend A.
+
+| Mac | Person | Roles | IP | Cloud equivalent |
+|-----|--------|-------|----|------------------|
+| Mac 1 | Abhinay | DNS server (dnsmasq) · Backend A `:3001` · Client 1 | `10.7.17.157` | Route 53 + app instance A |
+| Mac 2 | Junaid | nginx edge: reverse proxy · TLS · load balancer | `10.7.17.8` | Application Load Balancer |
+| Mac 3 | Srikar | Backend B `:3002` · Client 2 · Wireshark | `10.7.17.37` | App instance B |
+
+```mermaid
+graph LR
+    C[" Client\nMac 1 / Mac 3"]
+    DNS[" dnsmasq\nMac 1 · 10.7.17.157:53"]
+    EDGE[" nginx edge\nMac 2 · 10.7.17.8:443\nTLS · round robin"]
+    BA[" Backend A\nMac 1 · :3001"]
+    BB[" Backend B\nMac 3 · :3002"]
+
+    C -->|"① A? app.routex.test (UDP 53)"| DNS
+    DNS -->|"② 10.7.17.8"| C
+    C -->|"③ HTTPS · SNI app.routex.test"| EDGE
+    EDGE -->|"④ HTTP"| BA
+    EDGE -->|"④ HTTP"| BB
+```
+
+**Protocol layers in one request:**
+
+| Layer (TCP/IP) | OSI | What it is in RouteX |
+|----------------|-----|----------------------|
+| Application | 7 | DNS query, HTTP `GET /api/status` |
+| (TLS) | 5–6 | TLS 1.3 between the client and nginx |
+| Transport | 4 | UDP 53 for DNS; TCP 443 client→edge; TCP 3001/3002 edge→backend |
+| Network | 3 | IPv4 `10.7.0.0/19`, ICMP for ping |
+| Link | 1–2 | Wi-Fi `en0`, MAC addresses, ARP |
+
+## 1.2 Build tasks and results
+
+| Task | What we did | Result (evidence) |
+|------|-------------|-------------------|
+| **A: LAN** | All Macs on the hostel Wi-Fi; recorded IP, mask, gateway, interface and MAC; pinged every pair | All pairs reachable (`01-lan/A01–A03`) |
+| **B: Private DNS** | dnsmasq on Mac 1 with `address=/app.routex.test/10.7.17.8` and `api` → same; clients set to `10.7.17.157` | `dig @10.7.17.157 app.routex.test +short` → `10.7.17.8`, and the same for `api` (`02-dns/B01–B04`) |
+| **C: Backends** | Express on `0.0.0.0:3001` (A) and `0.0.0.0:3002` (B); `GET /`, `GET /api/status`, `X-Backend` header | Both reachable from Mac 2 by IP (`03-backends/C01–C04`) |
+| **D: Reverse proxy + LB** | nginx `upstream project_backends` with round-robin | 12 requests from Mac 3: 7 × A, 5 × B, alternating (`04-nginx/D03`) |
+| **E: TLS** | Self-signed cert `CN=app.routex.test` (SAN), trusted in every client's System keychain; nginx on 443 | `curl -v` without `-k`: *TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256*, *subjectAltName matched*, *SSL certificate verify ok* (`05-tls/E02`) |
+| **F: Caching** | `/api/status` sends `Cache-Control: max-age=60` and Express's ETag | `curl -I` showed `Cache-Control: max-age=60`, `ETag: W/"1d-…"`; the browser showed **200 then 304** (`06-cache/F01–F02`) |
+| **G: Protocol flow** | Wireshark on Mac 3 | DNS, TCP handshake, TLS, plaintext upstream HTTP (`07-wireshark/G01–G06`, details below) |
+
+**Why D was not a perfect A-B-A-B:** nginx's round-robin counter is shared by **every** client, and with `worker_processes auto` each worker process keeps its own counter. Requests from other clients and other workers fall in between ours, so one client's sequence can show `B B` or `A A A`. Across all traffic the split is still even.
+
+## 1.3 Packet evidence (Task G)
+
+| Event | What the capture shows |
+|-------|------------------------|
+| **DNS** (G01) | Mac 3 `10.7.17.37`, source port `52449` → Mac 1 `10.7.17.157`, port **53/UDP**. dnsmasq answered `routex.test` and replied **Refused** for internet names such as `hotstar.com`: in Phase 1 it served only our zone. |
+| **TCP handshake** (G02) | `55535 → 443 [SYN]`, `443 → 55535 [SYN, ACK]`, `55535 → 443 [ACK]`. The client's ephemeral port is `55535` and the server's well-known port is `443`. The socket pair is `10.7.17.37:55535 ↔ 10.7.17.8:443`. |
+| **TLS handshake** (G02/G03) | `Client Hello (SNI=app.routex.test)` → `Server Hello, Change Cipher Spec, Application Data…`. After that, every record is *Application Data*. In TLS 1.3 even the certificate is encrypted, so the HTTP request can't be read in Wireshark. |
+| **Upstream hop** (G02) | On the same capture, the edge `10.7.17.8:52136 → 10.7.17.37:3002` shows its own SYN/SYN-ACK/ACK, then `GET /api/status HTTP/1.1` and `HTTP/1.1 200 OK (JSON)` **in plaintext**. This is TLS termination: encrypted between the client and the edge, plain HTTP between the edge and the backend. |
+| **Load balancing** (G05) | Filtering on each backend's IP shows requests reaching both A and B. |
+| **Ports** (G06) | DNS on 53/UDP, HTTPS on 443/TCP, backends on 3001/3002/TCP. |
+| **Reliability** | The `Seq`/`Ack` numbers count bytes (`Seq=1 Ack=326`, then `Ack=500`, `Ack=1663`…) and `Win=` advertises the receive window (flow control). |
+
+## 1.4 Required failure demonstrations
+
+| # | Fault we injected | What we saw | What it proves |
+|---|-------------------|-------------|----------------|
+| 1 | Client DNS changed to `10.7.123.12` | `dig` → *connection timed out; no servers could be reached*; `curl` → **exit 6** *Could not resolve host* | The IP layer still works but the name can't be found. DNS and IP connectivity are independent. |
+| 2 | A record changed to `10.7.17.121` | `dig +short` went from `10.7.17.8` to `10.7.17.121`, so curl went to that address instead of the edge | DNS "worked" but sent us to the wrong place. DNS is a directory, not a connection. |
+| 3 | Backend A stopped | Every response came back `X-Backend: B` | nginx stops using a backend that refuses connections |
+| 4 | Both backends stopped | `HTTP/1.1 502 Bad Gateway` from `nginx/1.31.6` | DNS, TCP and TLS to the edge all succeeded; the failure is behind the edge |
+| 5 | Wrong port `3999` | *connect to 10.7.17.37 port 3999 … failed: Connection refused*, **curl exit 7** | The host is reachable but nothing listens on that port (RST). IP and port are separate identifiers. |
+
+## 1.5 Phase 1 learning summary
+
+- **DNS vs connection:** DNS only returns an address. Failures 1 and 2 show resolution and connection fail in different, distinguishable ways (exit 6 vs exit 7).
+- **Reverse proxy:** clients know only `app.routex.test`. The backend IPs live in nginx's `upstream` block, which is why we could later move Backend A without touching any client.
+- **TLS termination:** the certificate validates because the name matches the SAN and the cert is trusted in the keychain. The cost is that the hop from the edge to the backends is plaintext, as seen in G02.
+- **Caching:** a fresh hit sends no request at all. A conditional request (`If-None-Match`) gets a 304 with no body. A full request gets 200 with the whole body.
+- **What Phase 1 left weak**, and Phase 2 fixed: a single DNS server, TTL 0, DNS and Backend A on the same Mac, backends open to the whole Wi-Fi, one edge, and only the app name in the certificate.
+
+---
+
+# Part 2 — Phase 2: Harden, Recover & Troubleshoot
 
 | Mac | Person | Phase 2 role | IP on test day |
 |-----|--------|--------------|----------------|
@@ -11,9 +105,25 @@
 | Mac 3 | Srikar | Backend B `:3002` · backup DNS · pf firewall · Client 2 · Wireshark | `10.7.28.31` |
 | Mac 4 | Nachiket | Backend A `:3001` · standby edge · pf firewall | `10.7.19.89` |
 
----
+```mermaid
+graph LR
+    C[" Clients\nMac 1 / Mac 3"]
+    D1[" Primary DNS\nMac 1 · TTL 30"]
+    D2[" Backup DNS\nMac 3 · TTL 30"]
+    E[" Primary edge\nMac 2 :443"]
+    S[" Standby edge\nMac 4 :443"]
+    A[" Backend A\nMac 4 :3001 · pf"]
+    B[" Backend B\nMac 3 :3002 · pf"]
 
-## 1. What changed from Phase 1
+    C -->|"DNS 1st"| D1
+    C -.->|"DNS 2nd"| D2
+    C -->|"HTTPS"| E
+    C -.->|"after cutover"| S
+    E --> A & B
+    S -.-> A & B
+```
+
+## 2.1 What changed from Phase 1
 
 **Why the layout changed.** Mac 4 was damaged during Phase 1, so Phase 1 ran on 3 Macs and Mac 1 carried both the DNS server and Backend A. In Phase 2 Mac 4 came back. We moved Backend A from Mac 1 to Mac 4, which matches the PDF's 4-machine layout and puts DNS and the backends on different machines. Stopping DNS no longer takes a backend down with it, so a DNS failure and an application failure can be shown separately. Clients needed no change, because they only know the name `app.routex.test`.
 
@@ -30,7 +140,7 @@
 
 ---
 
-## 2. Resilience tests and results
+## 2.2 Resilience tests and results
 
 ### Ext A — Backup DNS resolver
 - **Setup:** a second dnsmasq on Mac 3 (`10.7.28.31`) with the same `address=` records. Clients use `networksetup -setdnsservers Wi-Fi 10.7.28.37 10.7.28.31`.
@@ -78,7 +188,7 @@
 
 ---
 
-## 3. Troubleshooting findings (Ext F)
+## 2.3 Troubleshooting findings (Ext F)
 
 **Method:** check layers bottom-up and prove each one before moving up: Link/IP → DNS → TCP → TLS → HTTP/app.
 
@@ -109,7 +219,7 @@ Because every reload failed, nginx kept running the old config, which still poin
 
 ---
 
-## 4. Learning summary
+## 2.4 Learning summary
 
 **A — Backup DNS.** One DNS server is a single point of failure: if it stops, the edge and backends are healthy but nobody can find them by name. A second server with identical records removes that. The client tries the first server, gets an ICMP port-unreachable (or a timeout), and asks the next. Check the name first: if `dig` fails it is a DNS failure (curl exit 6); if `dig` works but the request fails, the problem is further along (exit 7, 502, 504). We also learned that a backup needs its own upstream resolver, or it depends on the server it is meant to back up.
 
@@ -125,7 +235,7 @@ Because every reload failed, nginx kept running the old config, which still poin
 
 ---
 
-## 5. Evidence index (`evidence/09-phase2/`)
+## 2.5 Evidence index (`evidence/09-phase2/`)
 
 | Ext | Files | Status |
 |-----|-------|--------|
