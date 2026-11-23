@@ -89,7 +89,7 @@ nginx/              nginx.conf (Phase 2 primary edge, Mac 2) · nginx-standby.co
 dns/                dnsmasq.conf (primary, Mac 1) · dnsmasq-backup.conf (Mac 3)
 firewall/           pf-mac3.conf · pf-mac4.conf (backend isolation rules)
 tls/                app.routex.test.crt (SAN: app + api; key is gitignored)
-config/             (reserved)
+config/             README.md: configuration bundle index, TLS setup notes, backend launch steps
 docs/
   IP-INVENTORY.md   all Macs, ports, reachability after pf
   TOPOLOGY.md       diagrams for Phase 1 and Phase 2
